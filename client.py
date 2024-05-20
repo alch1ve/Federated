@@ -6,11 +6,8 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from flwr.client import ClientApp, NumPyClient
 import tensorflow as tf
 
-# Define the paths to your dataset
-train_cats_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs\train\cats"
-train_dogs_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs\train\dogs"
-test_cats_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs\test\cats"
-test_dogs_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs\test\dogs"
+# Define the base path to your dataset
+dataset_base_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs"
 
 # Function to load images from a directory
 def load_images_from_directory(directory, label, img_size=(32, 32)):
@@ -24,17 +21,29 @@ def load_images_from_directory(directory, label, img_size=(32, 32)):
         labels.append(label)
     return images, labels
 
-# Load train dataset
-train_cats_images, train_cats_labels = load_images_from_directory(train_cats_path, 0)
-train_dogs_images, train_dogs_labels = load_images_from_directory(train_dogs_path, 1)
-x_train = np.array(train_cats_images + train_dogs_images)
-y_train = np.array(train_cats_labels + train_dogs_labels)
+# Function to load dataset
+def load_dataset(base_path):
+    train_cats_path = os.path.join(base_path, "train/cats")
+    train_dogs_path = os.path.join(base_path, "train/dogs")
+    test_cats_path = os.path.join(base_path, "test/cats")
+    test_dogs_path = os.path.join(base_path, "test/dogs")
 
-# Load test dataset
-test_cats_images, test_cats_labels = load_images_from_directory(test_cats_path, 0)
-test_dogs_images, test_dogs_labels = load_images_from_directory(test_dogs_path, 1)
-x_test = np.array(test_cats_images + test_dogs_images)
-y_test = np.array(test_cats_labels + test_dogs_labels)
+    # Load train dataset
+    train_cats_images, train_cats_labels = load_images_from_directory(train_cats_path, 0)
+    train_dogs_images, train_dogs_labels = load_images_from_directory(train_dogs_path, 1)
+    x_train = np.array(train_cats_images + train_dogs_images)
+    y_train = np.array(train_cats_labels + train_dogs_labels)
+
+    # Load test dataset
+    test_cats_images, test_cats_labels = load_images_from_directory(test_cats_path, 0)
+    test_dogs_images, test_dogs_labels = load_images_from_directory(test_dogs_path, 1)
+    x_test = np.array(test_cats_images + test_dogs_images)
+    y_test = np.array(test_cats_labels + test_dogs_labels)
+
+    return (x_train, y_train), (x_test, y_test)
+
+# Load dataset
+(x_train, y_train), (x_test, y_test) = load_dataset(dataset_base_path)
 
 # Normalize the datasets
 x_train, x_test = x_train / 255.0, x_test / 255.0
@@ -85,7 +94,7 @@ parser.add_argument(
     type=int,
     choices=[0, 1],
     default=0,
-    help="Partition of the dataset (0, 1 or 2). "
+    help="Partition of the dataset (0 or 1)."
 )
 args, _ = parser.parse_known_args()
 
