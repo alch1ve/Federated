@@ -7,49 +7,41 @@ from flwr.client import ClientApp, NumPyClient
 import tensorflow as tf
 
 # Define the base path to your dataset
-dataset_base_path = r"C:\Users\aldri\federated\dataset\cats_and_dogs"
+dataset_base_path = r"C:\Users\aldri\federated\dataset\cpe_faculty"
 
 # Function to load images from a directory
 def load_images_from_directory(directory, label, img_size=(32, 32)):
     images = []
     labels = []
     for img_name in os.listdir(directory):
-        img_path = os.path.join(directory, img_name)
-        img = load_img(img_path, target_size=img_size)
-        img_array = img_to_array(img)
-        images.append(img_array)
-        labels.append(label)
+        if img_name.endswith('.jpg'):
+            img_path = os.path.join(directory, img_name)
+            img = load_img(img_path, target_size=img_size)
+            img_array = img_to_array(img)
+            images.append(img_array)
+            labels.append(label)
     return images, labels
 
 # Function to load dataset
 def load_dataset(base_path):
-    train_cats_path = os.path.join(base_path, "train/cats")
-    train_dogs_path = os.path.join(base_path, "train/dogs")
-    test_cats_path = os.path.join(base_path, "test/cats")
-    test_dogs_path = os.path.join(base_path, "test/dogs")
-
-    # Load train dataset
-    train_cats_images, train_cats_labels = load_images_from_directory(train_cats_path, 0)
-    train_dogs_images, train_dogs_labels = load_images_from_directory(train_dogs_path, 1)
-    x_train = np.array(train_cats_images + train_dogs_images)
-    y_train = np.array(train_cats_labels + train_dogs_labels)
-
-    # Load test dataset
-    test_cats_images, test_cats_labels = load_images_from_directory(test_cats_path, 0)
-    test_dogs_images, test_dogs_labels = load_images_from_directory(test_dogs_path, 1)
-    x_test = np.array(test_cats_images + test_dogs_images)
-    y_test = np.array(test_cats_labels + test_dogs_labels)
-
-    return (x_train, y_train), (x_test, y_test)
+    classes = os.listdir(base_path)
+    images = []
+    labels = []
+    for idx, class_name in enumerate(classes):
+        class_path = os.path.join(base_path, class_name)
+        class_images, class_labels = load_images_from_directory(class_path, idx)
+        images.extend(class_images)
+        labels.extend(class_labels)
+    return np.array(images), np.array(labels)
 
 # Load dataset
-(x_train, y_train), (x_test, y_test) = load_dataset(dataset_base_path)
+x, y = load_dataset(dataset_base_path)
 
 # Normalize the datasets
-x_train, x_test = x_train / 255.0, x_test / 255.0
+x = x / 255.0
 
-# Split train data further if needed for validation
-x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
+# Split data into train and test sets
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
 # Partition the dataset
 def partition_data(x, y, num_partitions):
@@ -103,6 +95,7 @@ x_train, y_train = train_partitions[args.partition_id]
 x_test, y_test = test_partitions[args.partition_id]
 
 # Define CNN model
+num_classes = len(np.unique(y))  # Number of unique classes (i.e., number of persons)
 model = tf.keras.models.Sequential([
     tf.keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
     tf.keras.layers.MaxPooling2D((2, 2)),
@@ -111,7 +104,7 @@ model = tf.keras.models.Sequential([
     tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
     tf.keras.layers.Flatten(),
     tf.keras.layers.Dense(64, activation='relu'),
-    tf.keras.layers.Dense(2, activation='softmax')  # 2 classes: cats and dogs
+    tf.keras.layers.Dense(num_classes, activation='softmax')  # Number of classes: number of persons
 ])
 
 # Compile the model
